@@ -10,7 +10,8 @@ from omegaconf import DictConfig, OmegaConf
 
 from benchmarl.hydra_config import load_experiment_from_hydra
 
-
+import warnings
+warnings.filterwarnings("ignore", message="size_average and reduce args will be deprecated")
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def hydra_experiment(cfg: DictConfig) -> None:
     """Runs an experiment loading its config from hydra.

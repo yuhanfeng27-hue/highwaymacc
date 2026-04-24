@@ -24,27 +24,41 @@ class MyCustomEnv2(ParallelEnv):
     def __init__(self, num_envs=2):
         super(MyCustomEnv2, self).__init__()
         self.state = None
-        self.t = 1
-        self.env=gym.make('highway-cacc')
+        self.t = 0
+        self.env = gym.make('highway-cacc', render_mode='human')
+        # self.env = gym.make('highway-cacc')
+        self.episode_count = 0
         num_agents = 4
         self.possible_agents = ["veh_" + str(r + 1) for r in range(num_agents)]
 
         self.agent_name_mapping = dict(
             zip(self.possible_agents, list(range(len(self.possible_agents))))
         )
-        self.render_mode = None
+        self.render_mode = 'human'        # 'human'None
+
+    def render(self):
+        return self.env.render()
 
     def observation_space(self, agent):
         state_low = np.full(37, -np.inf, dtype=np.float32)
         state_high = np.full(37, np.inf, dtype=np.float32)
 
-        return spaces.Box(
-            low=state_low,
-            high=state_high,
-            shape=(37,),
-            dtype=np.float32,  # this was the problem (originally we used float64 but
-            # changed to benchmarl error - also the function below)
-        )
+        return spaces.Dict({
+            # 原始的物理观测
+            "observation": spaces.Box(
+                low=state_low,
+                high=state_high,
+                shape=(37,),
+                dtype=np.float32,
+            ),
+            # 新增的动作屏蔽掩码 (5个离散动作)
+            "action_mask": spaces.Box(
+                low=0,
+                high=1,
+                shape=(5,),
+                dtype=np.int8,
+            )
+        })
 
     def action_space(self, agent):
         return spaces.Discrete(5)
@@ -58,35 +72,64 @@ class MyCustomEnv2(ParallelEnv):
         pass
 
     def reset(self, seed=None, options=None):
-        self.t = 1
+        self.t = 0
         self.agents = self.possible_agents[:]
-        joint_obs,info = self.env.reset(seed=seed, options=options)  # 返回 (tuple of agent_obs, info dict)
-        observations = {agent: joint_obs[i] for i, agent in enumerate(self.agents)}
+
+        joint_obs, info = self.env.reset(seed=seed, options=options)
+        mask = info.get("action_mask", np.ones((len(self.agents), 5), dtype=np.int8))
+
+        # 将观测值和掩码打包成字典
+        observations = {
+            agent: {
+                "observation": joint_obs[i].astype(np.float32),
+                "action_mask": mask[i].astype(np.int8)
+            } for i, agent in enumerate(self.agents)
+        }
+
         infos = {agent: {} for agent in self.agents}
         self.state = observations
-        # print("RESET DONE")
+        self.episode_count += 1
+        # print(f"\n=========================================")
+        # print(f"🎬 正在开始第 {self.episode_count} 局测试...")
+        # print(f"=========================================")
 
         return observations, infos
 
     def step(self, actions):
-
         self.t += 1
         action_tuple = tuple(actions[agent] for agent in self.agents)
+        # action_names = {0: "LEFT(左转)", 1: "IDLE(保持)", 2: "RIGHT(右转)", 3: "FASTER(加速)", 4: "SLOWER(减速)"}
+        # print(f"\n--- 第 {self.t} 步动作输出 ---")
+        # for i, agent in enumerate(self.agents):
+        #     # 兼容 Tensor 和 int
+        #     act_val = int(action_tuple[i].item()) if hasattr(action_tuple[i], 'item') else int(action_tuple[i])
+        #     act_str = action_names.get(act_val, f"未知({act_val})")
+        #     print(f"{agent}: {act_str}")
         joint_obs, reward, terminated, truncated, info = self.env.step(action_tuple)
-        observations = {agent: joint_obs[i] for i, agent in enumerate(self.agents)}
+
+        # 获取环境传出来的 mask
+        mask = info.get("action_mask", np.ones((len(self.agents), 5), dtype=np.int8))
+
+        # 将观测值和掩码打包成字典
+        observations = {
+            agent: {
+                "observation": joint_obs[i].astype(np.float32),
+                "action_mask": mask[i].astype(np.int8)
+            } for i, agent in enumerate(self.agents)
+        }
 
         rewards = {agent: float(reward) for agent in self.agents}
+        truncated = terminated or truncated
         terminations = {agent: terminated for agent in self.agents}
-        truncations = {agent: truncated  for agent in self.agents}
+        truncations = {agent: truncated for agent in self.agents}
 
         self.state = observations
-
         infos = {agent: {} for agent in self.agents}
 
         return observations, rewards, terminations, truncations, infos
 
 class MyenvTask(Task):
-    MY_TASK = None
+    MY_TASK = "my_task"
 
     @staticmethod
     def associated_class():
@@ -133,7 +176,17 @@ class MyEnvClass(TaskClass):
         return None
 
     def action_mask_spec(self, env: EnvBase) -> Optional[CompositeSpec]:
-        return None
+        observation_spec = env.observation_spec.clone()
+        mask_spec = CompositeSpec()
+
+        for group in self.group_map(env):
+            # 如果底层 wrapper 成功解析了 action_mask，把它提取出来作为掩码的 spec
+            if "action_mask" in observation_spec[group].keys():
+                mask_spec[group] = CompositeSpec(
+                    {"action_mask": observation_spec[group]["action_mask"]}
+                )
+
+        return mask_spec if not mask_spec.is_empty() else None
 
     def observation_spec(self, env: EnvBase) -> CompositeSpec:
         observation_spec = env.observation_spec.clone()

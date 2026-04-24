@@ -7,7 +7,8 @@ import argparse
 from pathlib import Path
 
 from benchmarl.hydra_config import reload_experiment_from_file
-
+import warnings
+warnings.filterwarnings("ignore", message="size_average and reduce args will be deprecated")
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Evaluates the experiment from a checkpoint file."

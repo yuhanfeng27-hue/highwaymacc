@@ -3,17 +3,17 @@ defaults:
   - _self_
 
 # The device for collection (e.g. cuda/cpu)
-sampling_device: "cuda"
+sampling_device: "cuda:0"
 # The device for training (e.g. cuda/cpu)
-train_device: "cuda"
+train_device: "cuda:0"
 # The device for the replay buffer of off-policy algorithms (e.g. cuda/cpu).
 # Use "disk" to store it on disk (in the experiment save_folder)
-buffer_device: "cuda"
+buffer_device: "cuda:0"
 
 # Whether to share the parameters of the policy within agent groups
 share_policy_params: True
 # If an algorithm and an env support both continuous and discrete actions, what should be preferred
-prefer_continuous_actions: True
+prefer_continuous_actions: False
 # If False collection is done using a collector (under no grad). If True, collection is done with gradients.
 collect_with_grad: False
 # In case of non-vectorized environments, whether to run collection of multiple processes
@@ -90,11 +90,11 @@ off_policy_prb_beta: 0.4
 
 evaluation: True
 # Whether to render the evaluation (if rendering is available)
-render: False
+render: True
 # Frequency of evaluation in terms of collected frames (this should be a multiple of on/off_policy_collected_frames_per_batch)
 evaluation_interval: 120_000
 # Number of episodes that evaluation is run on
-evaluation_episodes: 1
+evaluation_episodes: 20
 # If True, when stochastic policies are evaluated, their deterministic value is taken, otherwise, if False, they are sampled
 evaluation_deterministic_actions: True
 # If True, seed the environment before evaluation leading to always the same evaluation env being used
@@ -124,11 +124,11 @@ restore_file: null
 restore_map_location: null
 # Interval for experiment saving in terms of collected frames (this should be a multiple of on/off_policy_collected_frames_per_batch).
 # Set it to 0 to disable checkpointing
-checkpoint_interval: 0
+checkpoint_interval: 60000
 # Whether to checkpoint when the experiment is done
-checkpoint_at_end: False
+checkpoint_at_end: True
 # How many checkpoints to keep. As new checkpoints are taken, temporally older checkpoints are deleted to keep this number of
 # checkpoints. The checkpoint at the end is included in this number. Set to `null` to keep all checkpoints.
-keep_checkpoints_num: 3
+keep_checkpoints_num: 10
 # Whether to exclude the replay buffers from the checkpoint
 exclude_buffer_from_checkpoint: False
