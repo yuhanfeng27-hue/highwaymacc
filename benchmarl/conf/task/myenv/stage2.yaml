@@ -1,0 +1,4 @@
+# 在 my_task.yaml 中
+name: "highway-cacc"
+env_args:
+  curriculum_stage: 2  # 切换阶段时，直接把这里的 1 改成 2、3、4

@@ -21,12 +21,17 @@ class MyCustomEnv2(ParallelEnv):
 
     metadata = {"render_modes": ["human"], "name": "myclass_v0"}
 
-    def __init__(self, num_envs=2):
+    def __init__(self, config=None, num_envs=2):
         super(MyCustomEnv2, self).__init__()
         self.state = None
         self.t = 0
         self.env = gym.make('highway-cacc', render_mode='human')
-        # self.env = gym.make('highway-cacc')
+        # self.env = gym.make('highway-cacc', render_mode='rgb_array')
+        # 2. 【核心】：将 YAML 中的配置注入到底层 highway-env 中
+        if config:
+            # 剔除 BenchMARL 传进来的 'name' 等非物理环境参数
+            env_config = {k: v for k, v in config.items() if k != "name"}
+            self.env.unwrapped.config.update(env_config)
         self.episode_count = 0
         num_agents = 4
         self.possible_agents = ["veh_" + str(r + 1) for r in range(num_agents)]
@@ -34,21 +39,22 @@ class MyCustomEnv2(ParallelEnv):
         self.agent_name_mapping = dict(
             zip(self.possible_agents, list(range(len(self.possible_agents))))
         )
-        self.render_mode = 'human'        # 'human'None
-
-    def render(self):
+        self.render_mode = 'human'    # 'human'None
+        # self.render_mode = None
+    def render(self, mode=None):
         return self.env.render()
 
     def observation_space(self, agent):
-        state_low = np.full(37, -np.inf, dtype=np.float32)
-        state_high = np.full(37, np.inf, dtype=np.float32)
+        # 【修改】：将 37 维改为 40 维 (1辆自车5个特征 + 8辆周边车各5个特征)
+        state_low = np.full(40, -np.inf, dtype=np.float32)
+        state_high = np.full(40, np.inf, dtype=np.float32)
 
         return spaces.Dict({
-            # 原始的物理观测
+            # 物理观测
             "observation": spaces.Box(
                 low=state_low,
                 high=state_high,
-                shape=(37,),
+                shape=(40,),
                 dtype=np.float32,
             ),
             # 新增的动作屏蔽掩码 (5个离散动作)
@@ -129,7 +135,10 @@ class MyCustomEnv2(ParallelEnv):
         return observations, rewards, terminations, truncations, infos
 
 class MyenvTask(Task):
-    MY_TASK = "my_task"
+    MY_TASK = "my_task"    # 保留原来的
+    STAGE1 = "stage1"      # 注册阶段一
+    STAGE2 = "stage2"      # 注册阶段二
+
 
     @staticmethod
     def associated_class():
@@ -151,7 +160,7 @@ class MyEnvClass(TaskClass):
             device=device,
             seed=seed,
             return_state=False,
-            **self.config,
+            # **self.config,
         )
 
     def supports_continuous_actions(self) -> bool:
