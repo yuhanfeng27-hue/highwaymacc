@@ -32,6 +32,8 @@ class MyCustomEnv2(ParallelEnv):
             # 剔除 BenchMARL 传进来的 'name' 等非物理环境参数
             env_config = {k: v for k, v in config.items() if k != "name"}
             self.env.unwrapped.config.update(env_config)
+        # 开启实时渲染：否则 pygame 不限帧率，evaluate 时 human 窗口会全速跑、看不清
+        self.env.unwrapped.config["real_time_rendering"] = True
         self.episode_count = 0
         num_agents = 4
         self.possible_agents = ["veh_" + str(r + 1) for r in range(num_agents)]
@@ -138,6 +140,7 @@ class MyenvTask(Task):
     MY_TASK = "my_task"    # 保留原来的
     STAGE1 = "stage1"      # 注册阶段一
     STAGE2 = "stage2"      # 注册阶段二
+    STAGE3 = "stage3"      # 注册阶段三
 
 
     @staticmethod
@@ -154,13 +157,14 @@ class MyEnvClass(TaskClass):
         device: DEVICE_TYPING,
     ) -> Callable[[], EnvBase]:
 
+        # 从 yaml 的 env_args 里取出环境配置（如 curriculum_stage），透传给底层 env
+        env_args = dict(self.config.get("env_args", {}))
         return lambda: PettingZooWrapper(
-            MyCustomEnv2(),
+            MyCustomEnv2(config=env_args),
             categorical_actions=True,
             device=device,
             seed=seed,
             return_state=False,
-            # **self.config,
         )
 
     def supports_continuous_actions(self) -> bool:
@@ -176,7 +180,7 @@ class MyEnvClass(TaskClass):
         return True
 
     def max_steps(self, env: EnvBase) -> int:
-        return 50
+        return 100
 
     def group_map(self, env: EnvBase) -> Dict[str, List[str]]:
         return {"veh":list(env.agents)}
