@@ -17,8 +17,11 @@ from .gnn import Gnn, GnnConfig
 from .gru import Gru, GruConfig
 from .lstm import Lstm, LstmConfig
 from .mlp import Mlp, MlpConfig
+from .entityattention import EntityAttention, EntityAttentionConfig
 
 classes = [
+    "EntityAttention",
+    "EntityAttentionConfig",
     "Mlp",
     "MlpConfig",
     "Gnn",
@@ -34,6 +37,7 @@ classes = [
 ]
 
 model_config_registry = {
+    "entityattention": EntityAttentionConfig,
     "mlp": MlpConfig,
     "gnn": GnnConfig,
     "cnn": CnnConfig,

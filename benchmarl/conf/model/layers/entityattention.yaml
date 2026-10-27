@@ -1,0 +1,6 @@
+# For PlatoonObservation: ego first, entity_type=0 marks empty vehicle slots.
+name: entityattention
+entity_features: 5
+embed_dim: 32
+num_heads: 4
+num_cells: [256, 256]

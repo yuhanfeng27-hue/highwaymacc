@@ -31,6 +31,11 @@ def _get_input_and_output_specs(
     y=12,
     set_size=5,
 ):
+    if model_name == "entityattention":
+        return (
+            Composite({"agents": Composite({"observation": Unbounded(shape=(n_agents, 40))}, shape=(n_agents,))}),
+            Composite({"agents": Composite({"out": Unbounded(shape=(n_agents, out_features))}, shape=(n_agents,))}),
+        )
 
     if model_name == "cnn":
         multi_agent_input_shape = (n_agents, x, y, in_features)
@@ -142,6 +147,8 @@ def test_loading_sequence_models(model_name, intermediate_size=10):
 def test_models_forward_shape(
     share_params, centralised, input_has_agent_dim, model_name, batch_size, n_agents=3
 ):
+    if model_name == "entityattention" and (centralised or not input_has_agent_dim):
+        pytest.skip("Vehicle attention supports decentralized actors with agent observations")
     if not input_has_agent_dim and not centralised:
         pytest.skip()  # this combination should never happen
     if ("gnn" in model_name) and (
@@ -230,6 +237,8 @@ def test_share_params_between_models(
     batch_size,
     n_agents=3,
 ):
+    if model_name == "entityattention" and (centralised or not input_has_agent_dim):
+        pytest.skip("Vehicle attention supports decentralized actors with agent observations")
     if not input_has_agent_dim and not centralised:
         pytest.skip()  # this combination should never happen
     if ("gnn" in model_name) and (
