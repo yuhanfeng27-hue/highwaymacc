@@ -1018,7 +1018,8 @@ class Experiment(CallbackNotifier):
 
     @staticmethod
     def reload_from_file(
-        restore_file: str, experiment_patch: Optional[Dict[str, Any]] = None
+        restore_file: str, experiment_patch: Optional[Dict[str, Any]] = None,
+        task_patch: Optional[Dict[str, Any]] = None,
     ) -> Experiment:
         """
         Restores the experiment from the checkpoint file.
@@ -1049,6 +1050,8 @@ class Experiment(CallbackNotifier):
             critic_model_config = pickle.load(f)
             callbacks = pickle.load(f)
         task.config = task_config
+        if task_patch:
+            task.config.setdefault("env_args", {}).update(task_patch)
         experiment_config.restore_file = restore_file
         if experiment_patch is not None:
             for key, value in experiment_patch.items():

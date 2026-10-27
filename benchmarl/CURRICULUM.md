@@ -71,3 +71,30 @@ python benchmarl/run_curriculum.py "curriculum.stages=[1,2,3]" experiment.sampli
 
 此命令只验证数据采集、参数更新、导出和跨阶段加载，不代表学会编队。
 奖励漏洞及固定车道偏好的分析仍然适用，增加注意力或迁移权重不会自动解决它们。
+
+## 训练不显示动画，测试时显示
+
+训练默认 `task.env_args.render_mode=null`、`task.env_args.debug_print=false`、
+`experiment.render=false`：不会创建动画窗口，也不会打印每步车辆表格；训练进度和必要提示仍保留。
+不再需要修改 `highway_cacc.py` 或手动切换环境中的两处 render_mode。
+
+测试课程权重，默认显示动画、不打印逐步车辆数据：
+
+```bash
+python benchmarl/evaluate.py "/path/to/curriculum_weights.pt"
+```
+
+显示动画，同时打印车辆数据；或者无窗口测试：
+
+```bash
+python benchmarl/evaluate.py "/path/to/curriculum_weights.pt" --debug-print
+python benchmarl/evaluate.py "/path/to/curriculum_weights.pt" --no-render
+```
+
+可追加 `--episodes 5` 或 `--device cuda:0`（默认 CPU）。显示动画需要在有桌面的电脑运行；
+若此前设置过 `SDL_VIDEODRIVER=dummy`，需在测试窗口前取消此变量，否则只会在虚拟显示中绘制。
+测试不依赖训练时是否开启动画，也不会修改已保存的训练配置。动作选取默认使用确定性策略。
+
+`experiment.render` 是原有评估视频记录开关，不是窗口总开关。使用新的 evaluate.py 查看窗口时
+不需要设置它为 true；human 模式由底层环境自动显示，避免把空图像交给视频日志模块。
+若需要在训练配置中直接调整，可覆盖 `task.env_args.render_mode` 和 `task.env_args.debug_print`。

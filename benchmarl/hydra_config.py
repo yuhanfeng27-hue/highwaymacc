@@ -18,7 +18,7 @@ _has_hydra = importlib.util.find_spec("hydra") is not None
 
 if _has_hydra:
     from hydra import compose, initialize, initialize_config_dir
-    from omegaconf import DictConfig, OmegaConf
+    from omegaconf import DictConfig, OmegaConf, open_dict
 
 
 class _HydraMissingMetadataError(FileNotFoundError):
@@ -145,7 +145,7 @@ def _find_hydra_folder(restore_file: str) -> str:
     raise _HydraMissingMetadataError()
 
 
-def reload_experiment_from_file(restore_file: str) -> Experiment:
+def reload_experiment_from_file(restore_file: str, experiment_patch=None, task_patch=None) -> Experiment:
     """Reloads the experiment from a given restore file.
 
     Requires a ``.hydra`` folder containing ``config.yaml``, ``hydra.yaml``, and ``overrides.yaml``
@@ -159,7 +159,7 @@ def reload_experiment_from_file(restore_file: str) -> Experiment:
         hydra_folder = _find_hydra_folder(restore_file)
     except _HydraMissingMetadataError:
         # Hydra was not used
-        return Experiment.reload_from_file(restore_file)
+        return Experiment.reload_from_file(restore_file, experiment_patch, task_patch)
 
     with initialize(
         version_base=None,
@@ -182,6 +182,11 @@ def reload_experiment_from_file(restore_file: str) -> Experiment:
     cfg.update(cfg_loaded)
     del cfg.hydra
     cfg.experiment.restore_file = restore_file
+    if experiment_patch:
+        cfg.experiment.update(experiment_patch)
+    if task_patch:
+        with open_dict(cfg.task.env_args):
+            cfg.task.env_args.update(task_patch)
 
     print("\nReloaded experiment with:")
     print(f"\nAlgorithm: {algorithm_name}, Task: {task_name}")

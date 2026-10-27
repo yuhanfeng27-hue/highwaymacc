@@ -40,6 +40,13 @@ def test_transfer_weights_and_reset_training_state(tmp_path):
     assert target.total_frames == target.n_iters_performed == 0
 
 
+def test_evaluation_loads_same_stage(tmp_path):
+    source, target = experiment(tmp_path), experiment(tmp_path)
+    path = save_stage_weights(source, 2, {})
+    load_stage_weights(target, path, 2, {}, evaluation=True)
+    torch.testing.assert_close(source.losses['veh'].weight, target.losses['veh'].weight)
+
+
 @pytest.mark.parametrize('failure', ['stage', 'signature', 'shape', 'legacy'])
 def test_reject_incompatible_transfer_before_mutation(tmp_path, failure):
     source, target = experiment(tmp_path), experiment(tmp_path)

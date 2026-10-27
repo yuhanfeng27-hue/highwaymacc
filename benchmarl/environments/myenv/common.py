@@ -19,21 +19,18 @@ class MyCustomEnv2(ParallelEnv):
     Multi-agent version of my single agent class.
     """
 
-    metadata = {"render_modes": ["human"], "name": "myclass_v0"}
+    metadata = {"render_modes": ["human", "rgb_array"], "name": "myclass_v0"}
 
     def __init__(self, config=None, num_envs=2):
         super(MyCustomEnv2, self).__init__()
         self.state = None
         self.t = 0
-        self.env = gym.make('highway-cacc', render_mode='human')
-        # self.env = gym.make('highway-cacc', render_mode='rgb_array')
-        # 2. 【核心】：将 YAML 中的配置注入到底层 highway-env 中
-        if config:
-            # 剔除 BenchMARL 传进来的 'name' 等非物理环境参数
-            env_config = {k: v for k, v in config.items() if k != "name"}
-            self.env.unwrapped.config.update(env_config)
-        # 开启实时渲染：否则 pygame 不限帧率，evaluate 时 human 窗口会全速跑、看不清
-        self.env.unwrapped.config["real_time_rendering"] = True
+        env_config = dict(config or {})
+        env_config.pop("name", None)
+        self.render_mode = env_config.pop("render_mode", None)
+        env_config.setdefault("debug_print", False)
+        env_config.setdefault("real_time_rendering", self.render_mode == "human")
+        self.env = gym.make('highway-cacc', render_mode=self.render_mode, config=env_config)
         self.episode_count = 0
         num_agents = 4
         self.possible_agents = ["veh_" + str(r + 1) for r in range(num_agents)]
@@ -41,8 +38,6 @@ class MyCustomEnv2(ParallelEnv):
         self.agent_name_mapping = dict(
             zip(self.possible_agents, list(range(len(self.possible_agents))))
         )
-        self.render_mode = 'human'    # 'human'None
-        # self.render_mode = None
     def render(self, mode=None):
         return self.env.render()
 
@@ -77,7 +72,7 @@ class MyCustomEnv2(ParallelEnv):
         or any other environment data which should not be kept around after the
         user is no longer using the environment.
         """
-        pass
+        self.env.close()
 
     def reset(self, seed=None, options=None):
         self.t = 0

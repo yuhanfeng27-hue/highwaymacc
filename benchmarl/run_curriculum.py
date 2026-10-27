@@ -34,14 +34,15 @@ def network_signature(cfg):
     }), resolve=True)
 
 
-def load_stage_weights(experiment, path, stage, signature):
+def load_stage_weights(experiment, path, stage, signature, *, evaluation=False):
     """Load network state only; never restore counters, optimizer, or collector."""
     checkpoint = torch.load(path, map_location='cpu', weights_only=True)
     if checkpoint.get('format') != 'benchmarl-curriculum-v1':
         raise ValueError("Use curriculum_weights.pt exported by this curriculum entry point; "
                          "legacy/full checkpoints are not supported for stage transfer")
-    if checkpoint.get('stage') != stage - 1:
-        raise ValueError(f"Stage {stage} requires weights from stage {stage - 1}")
+    source_stage = stage if evaluation else stage - 1
+    if checkpoint.get('stage') != source_stage:
+        raise ValueError(f"Stage {stage} requires weights from stage {source_stage}")
     if checkpoint.get('signature') != signature:
         raise ValueError("Network configuration differs from the previous stage; "
                          "keep actor, critic, algorithm and sharing settings identical")
@@ -64,7 +65,7 @@ def load_stage_weights(experiment, path, stage, signature):
         loss.load_state_dict(weights[f'loss_{group}'], strict=True)
     if not experiment.config.collect_with_grad:
         experiment.collector.update_policy_weights_()
-    print(f'[Curriculum] Loaded stage {stage - 1} networks from {path}; '
+    print(f'[Curriculum] Loaded stage {source_stage} networks from {path}; '
           f'frames={experiment.total_frames}, iterations={experiment.n_iters_performed}', flush=True)
 
 
