@@ -2,7 +2,15 @@
 
 import json
 import copy
+import warnings
 from pathlib import Path
+
+warnings.filterwarnings(
+    'ignore',
+    message=r'size_average and reduce args will be deprecated, please use reduction=',
+    category=UserWarning,
+    module=r'torch\.nn\._reduction',
+)
 
 import hydra
 import torch
