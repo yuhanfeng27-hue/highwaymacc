@@ -38,10 +38,11 @@ observation_space must still agree. The current MyCustomEnv2 wrapper declares
 40 features; increasing its HDV count requires a separate coordinated change.
 
 Existing MLP checkpoints cannot initialize the new actor unchanged. Start a new
-attention experiment, and use attention checkpoints for subsequent curriculum
-warm starts. `run_curriculum.py` contains a hardcoded old checkpoint path: update
-it to a compatible attention checkpoint before using that entry point. To use an
-old MLP checkpoint, retain the MLP architecture.
+attention experiment through `run_curriculum.py`, and use its exported
+`curriculum_weights.pt` for subsequent curriculum warm starts. See
+`benchmarl/CURRICULUM.md` for automatic and manual stage transitions. To use an
+old MLP checkpoint with the existing evaluation/resume entry points, retain the
+MLP architecture; legacy checkpoints are not curriculum transfer artifacts.
 
 A successful short run proves integration, not better learning. Compare MLP and
 attention under identical rewards, seeds, frame budgets and evaluation settings.

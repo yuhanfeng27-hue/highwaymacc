@@ -7,3 +7,8 @@ defaults:
   - _self_
 
 seed: 0
+
+# Used only by run_curriculum.py. Null stages runs the selected task only.
+curriculum:
+  stages: null
+  warmstart_from: null
