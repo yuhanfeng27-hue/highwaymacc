@@ -98,3 +98,28 @@ python benchmarl/evaluate.py "/path/to/curriculum_weights.pt" --no-render
 `experiment.render` 是原有评估视频记录开关，不是窗口总开关。使用新的 evaluate.py 查看窗口时
 不需要设置它为 true；human 模式由底层环境自动显示，避免把空图像交给视频日志模块。
 若需要在训练配置中直接调整，可覆盖 `task.env_args.render_mode` 和 `task.env_args.debug_print`。
+
+## wandb 与 Windows 路径
+
+同时保存本地 CSV 和 wandb 指标：
+
+```bash
+python benchmarl/run_curriculum.py "curriculum.stages=[1,2,3]" experiment.max_n_frames=2000000 "experiment.loggers=[csv,wandb]" experiment.render=false
+```
+
+本机需安装 wandb，并先执行 `wandb login`。如设置过 WANDB_MODE=offline/dryrun，
+需取消该变量或设置为 online，才会实时上传。不要在代码或聊天中填写 API key。
+
+代码默认给每个实验生成稳定的 16 字符 wandb ID，保留完整可读的显示名称，
+wandb 本地目录放在 stageN/wandb 下，评估文件使用短名 results.json。
+这样避免长实验名在运行目录和上传临时文件名中重复，降低 Windows 路径超长风险。
+自定义 wandb ID 仍然优先，但不应让不同阶段使用同一个固定 ID。
+只修改 wandb 的 name 不会缩短其运行 ID。
+
+若项目本身位于很深的目录，还可给每次课程指定一个新的短输出根目录：
+
+```bash
+python benchmarl/run_curriculum.py "curriculum.stages=[1,2,3]" experiment.max_n_frames=2000000 "experiment.loggers=[csv,wandb]" experiment.save_folder=D:/bm_runs/run01 hydra.run.dir=D:/bm_hydra/run01
+```
+
+每次新训练更换 run01，避免覆盖课程清单。新版本的路径修正需要重启训练进程才生效。

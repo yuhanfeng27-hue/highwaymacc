@@ -5,6 +5,7 @@
 #
 
 import json
+import hashlib
 import os
 import warnings
 from collections.abc import MutableMapping, Sequence
@@ -52,7 +53,7 @@ class Logger:
         if experiment_config.create_json:
             self.json_writer = JsonWriter(
                 folder=folder_name,
-                name=experiment_name + ".json",
+                name="results.json",
                 algorithm_name=algorithm_name,
                 task_name=task_name,
                 environment_name=environment_name,
@@ -68,17 +69,29 @@ class Logger:
                 raise ValueError(
                     f"wandb_extra_kwargs.project ({wandb_project}) is different from the project_name ({project_name})"
                 )
+            logger_folder = folder_name
+            logger_kwargs = {
+                "group": task_name,
+                # The human-readable name need not be used as an on-disk run ID.
+                "id": hashlib.sha256(experiment_name.encode()).hexdigest()[:16],
+                "project": project_name,
+                **wandb_extra_kwargs,
+            }
+            if logger_name == "wandb":
+                # Avoid repeating a long experiment name in Windows file paths.
+                logger_folder = str(Path(folder_name).parent)
+                save_dir = logger_kwargs.pop("save_dir", None)
+                log_dir = logger_kwargs.pop("log_dir", None)
+                if save_dir and log_dir:
+                    raise ValueError("Specify only one wandb save_dir or log_dir")
+                logger_folder = str(save_dir or log_dir or logger_folder)
+                Path(logger_folder).mkdir(parents=True, exist_ok=True)
             self.loggers.append(
                 get_logger(
                     logger_type=logger_name,
-                    logger_name=folder_name,
+                    logger_name=logger_folder,
                     experiment_name=experiment_name,
-                    wandb_kwargs={
-                        "group": task_name,
-                        "id": experiment_name,
-                        "project": project_name,
-                        **wandb_extra_kwargs,
-                    },
+                    wandb_kwargs=logger_kwargs,
                 )
             )
 
